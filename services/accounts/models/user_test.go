@@ -1,6 +1,8 @@
 package user
 
 import (
+	"crypto/hmac"
+	"crypto/sha512"
 	"testing"
 )
 
@@ -43,8 +45,10 @@ func TestUser(t *testing.T) {
 			t.Errorf("Expected: %s got: %s", creds[0], u.Username)
 		} else if len(u.IH) != 64 {
 			t.Error("Bad User Identity value")
-		} else if len(u.APIToken) != 64 {
-			t.Error("Bad API Token")
+		} else if len(u.PrivateKey) != 64 {
+			t.Error("Bad Private Key")
+		} else if pk := sha512.Sum512([]byte(u.Verifier)); !hmac.Equal(pk[:], u.PrivateKey) {
+			t.Error("Invalid Private Key")
 		}
 
 		ok, err := u.Verify(creds[1])

@@ -1,6 +1,7 @@
 package user
 
 import (
+	"crypto/sha512"
 	"crypto/subtle"
 	"errors"
 	"regexp"
@@ -17,12 +18,12 @@ const (
 
 // User - A User object
 type User struct {
-	Username string
-	Verifier string
-	IH       string // srp identity
-	Email    string
-	TOTPKey  string // 2FA secret key
-	APIToken string // Token to use our API
+	Username   string
+	Verifier   string
+	IH         string // srp identity
+	Email      string
+	TOTPKey    string // 2FA secret key
+	PrivateKey []byte // HMAC private key
 }
 
 // NewUser - creates a new user
@@ -53,22 +54,19 @@ func NewUser(uname, pwd, email string) (*User, error) {
 	}
 
 	ih, vfr := vh.Encode()
-	vh, err = srpEnv.Verifier([]byte(ih), []byte(pwd))
-	if err != nil {
-		return nil, err
-	}
-	token, _ := vh.Encode()
+
+	private := sha512.Sum512([]byte(vfr))
 
 	return &User{
-		Username: uname,
-		Verifier: vfr,
-		IH:       ih,
-		Email:    email,
-		APIToken: token,
+		Username:   uname,
+		Verifier:   vfr,
+		IH:         ih,
+		Email:      email,
+		PrivateKey: private[:],
 	}, nil
 }
 
-// Verify - checks if user credentials match
+// Verify - checks if password is valid
 func (u User) Verify(pwd string) (bool, error) {
 	srpEnv, err := srp.New(nBits)
 	if err != nil {
