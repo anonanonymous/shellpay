@@ -78,3 +78,10 @@ func getBody(req *http.Request) ([]byte, error) {
 	}
 	return rawData, nil
 }
+
+// sign - returns a HMAC signature for a message
+func sign(message string) string {
+	mac := hmac.New(sha512.New, []byte(MasterKey))
+	mac.Write([]byte(message))
+	return hex.EncodeToString(mac.Sum(nil))
+}

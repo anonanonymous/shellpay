@@ -6,19 +6,6 @@ import (
 	"testing"
 )
 
-type userDB struct {
-	users map[string]User
-}
-
-func (db userDB) insert(usr User) {
-	db.users[usr.IH] = usr
-}
-
-func (db userDB) query(ident string) (User, bool) {
-	u, ok := db.users[ident]
-	return u, ok
-}
-
 func TestUser(t *testing.T) {
 	var err error
 	var u *User

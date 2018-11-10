@@ -33,7 +33,7 @@ func CreateUser(res http.ResponseWriter, req *http.Request, _ httprouter.Params)
 	}
 
 	if err = json.Unmarshal(rawData, &body); err != nil {
-		handleError(res, "Internal error", http.StatusInternalServerError)
+		handleError(res, "Malformed data", http.StatusBadRequest)
 		return
 	}
 
@@ -47,8 +47,8 @@ func CreateUser(res http.ResponseWriter, req *http.Request, _ httprouter.Params)
 		handleError(res, "Missing Password", http.StatusBadRequest)
 		return
 	}
-	email, ok := body["email"]
 
+	email, ok := body["email"]
 	if isRegistered(uname) {
 		handleError(res, "Username Taken", http.StatusBadRequest)
 		return
@@ -63,6 +63,7 @@ func CreateUser(res http.ResponseWriter, req *http.Request, _ httprouter.Params)
 		handleError(res, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	res.WriteHeader(http.StatusCreated)
 	json.NewEncoder(res).Encode(response{
 		Status: "ok",
