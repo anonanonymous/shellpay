@@ -14,12 +14,12 @@ import (
 func main() {
 	router := httprouter.New()
 
-	router.POST("/api/users", createUser)
+	router.POST("/api/users", CreateUser)
 	log.Fatal(http.ListenAndServe(hostPort, router))
 }
 
-// createUser - creates a new user, stores it in the userDB
-func createUser(res http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+// CreateUser - creates a new user, stores it in the userDB
+func CreateUser(res http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	var body request
 	rawData, err := getBody(req)
 	if err != nil {
@@ -33,28 +33,24 @@ func createUser(res http.ResponseWriter, req *http.Request, _ httprouter.Params)
 	}
 
 	if err = json.Unmarshal(rawData, &body); err != nil {
-		handleError(res, "Error processing request", http.StatusInternalServerError)
+		handleError(res, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
 	uname, ok := body["username"]
-	if !ok {
-		handleError(res, "Error processing request: Missing Username", http.StatusBadRequest)
+	if !ok || uname == "" {
+		handleError(res, "Missing Username", http.StatusBadRequest)
 		return
 	}
 	pwd, ok := body["password"]
-	if !ok {
-		handleError(res, "Error processing request: Missing Password", http.StatusBadRequest)
+	if !ok || pwd == "" {
+		handleError(res, "Missing Password", http.StatusBadRequest)
 		return
 	}
 	email, ok := body["email"]
-	if !ok {
-		handleError(res, "Error processing request: Missing Email", http.StatusBadRequest)
-		return
-	}
 
 	if isRegistered(uname) {
-		handleError(res, "Error: Username Taken", http.StatusBadRequest)
+		handleError(res, "Username Taken", http.StatusBadRequest)
 		return
 	}
 
