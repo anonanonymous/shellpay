@@ -102,7 +102,7 @@ func GetUser(res http.ResponseWriter, req *http.Request, params httprouter.Param
 			"verifier":   usr.Verifier,
 			"email":      usr.Email,
 			"identity":   usr.IH,
-			"privateKey": hex.EncodeToString(usr.PrivateKey),
+			"privateKey": string(usr.PrivateKey),
 			"totpKey":    usr.TOTPKey,
 		},
 	})
