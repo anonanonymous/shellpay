@@ -1,5 +1,8 @@
 language: go
 go:
     - "1.10"
-before_install:
-  - cd ${TRAVIS_BUILD_DIR}/services/accounts
+before_script:
+  - psql -c 'create database userdb_test;' -U postgres
+  - cat ${TRAVIS_BUILD_DIR}/userdb.sql | psql -U postgres
+services:
+  - postgresql
