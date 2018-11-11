@@ -22,9 +22,7 @@ func init() {
 	if dbUser = os.Getenv("DB_USER"); dbUser == "" {
 		panic("Set the DB_USER env variable")
 	}
-	if dbPwd = os.Getenv("DB_PWD"); dbPwd == "" {
-		panic("Set the DB_PWD env variable")
-	}
+	dbPwd = os.Getenv("DB_PWD")
 
 	dbName = os.Getenv("DB_NAME")
 	userDB, err = sql.Open("postgres", "postgres://"+dbUser+":"+dbPwd+"@localhost/"+dbName+"?sslmode=disable")
