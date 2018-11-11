@@ -3,5 +3,6 @@ go:
     - "1.10"
 before_script:
   - cat ${TRAVIS_BUILD_DIR}/userdb.sql | psql -U postgres
+  - echo "ALTER USER postgres WITH PASSWORD 'postgres';" | psql -U postgres
 services:
   - postgresql
