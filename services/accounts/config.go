@@ -25,8 +25,10 @@ func init() {
 	if dbPwd = os.Getenv("DB_PWD"); dbPwd == "" {
 		panic("Set the DB_PWD env variable")
 	}
+	if dbName = os.Getenv("DB_NAME"); dbName == "" {
+		panic("Set the DB_NAME env variable")
+	}
 
-	dbName = os.Getenv("DB_NAME")
 	userDB, err = sql.Open("postgres", "postgres://"+dbUser+":"+dbPwd+"@localhost/"+dbName+"?sslmode=disable")
 	if err != nil {
 		panic(err)

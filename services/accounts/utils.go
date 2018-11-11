@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 
@@ -84,4 +85,39 @@ func sign(message string) string {
 	mac := hmac.New(sha512.New, []byte(MasterKey))
 	mac.Write([]byte(message))
 	return hex.EncodeToString(mac.Sum(nil))
+}
+
+// getJSON - gets the json from a request
+func getJSON(req *http.Request) ([]byte, error) {
+	rawData, err := getBody(req)
+	if err != nil {
+		return nil, errors.New("Internal error")
+	}
+	return rawData, nil
+}
+
+// getUser - retrieves a user from the database
+func getUser(userid string) (*user.User, error) {
+	var email, totp []byte
+
+	row := userDB.QueryRow(`
+			SELECT ih, verifier, username, email, privateKey, totpKey
+			FROM users
+			WHERE id = $1;`, userid,
+	)
+	usr := user.User{}
+	err := row.Scan(
+		&usr.IH, &usr.Verifier, &usr.Username,
+		&email, &usr.PrivateKey, &totp,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if email != nil {
+		usr.Email = string(email)
+	}
+	if totp != nil {
+		usr.TOTPKey = string(totp)
+	}
+	return &usr, nil
 }

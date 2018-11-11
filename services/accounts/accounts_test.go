@@ -14,6 +14,7 @@ import (
 func Router() *httprouter.Router {
 	router := httprouter.New()
 	router.POST("/api/users", CreateUser)
+	router.GET("/api/users/:user_id", GetUser)
 	return router
 }
 
@@ -47,6 +48,31 @@ func TestCreateUser(t *testing.T) {
 		Router().ServeHTTP(resp, request)
 		assert.Equal(t, 400, resp.Code, "Failed to Create User")
 		assert.Equal(t, `{"status":"`+badRes[i]+`","result":null}`+"\n", resp.Body.String())
+	}
+}
+
+func TestGetUser(t *testing.T) {
+	userDB.Exec("UPDATE users SET id = 1 WHERE username ='anon';")
+	userDB.Exec("UPDATE users SET id = 2 WHERE username ='an on';")
+	userDB.Exec("UPDATE users SET id = 3 WHERE username ='username';")
+	userDB.Exec("UPDATE users SET id = 4 WHERE username ='anonymous';")
+	goodUIDS := []string{"1", "2", "3", "4"}
+	badUIDS := []string{"-1", "io2-", "; TRUNCATE users;", "hi"}
+	//badUIDS := []string{"-1", "12", "31", "pp"}
+
+	for _, v := range goodUIDS {
+		request, _ := http.NewRequest("GET", "/api/users/"+v, nil)
+		request.SetBasicAuth("", sign(""))
+		resp := httptest.NewRecorder()
+		Router().ServeHTTP(resp, request)
+		assert.Equal(t, 200, resp.Code, "Retrieved User")
+	}
+	for _, v := range badUIDS {
+		request, _ := http.NewRequest("GET", "/api/users/"+v, nil)
+		request.SetBasicAuth("", sign(""))
+		resp := httptest.NewRecorder()
+		Router().ServeHTTP(resp, request)
+		assert.Equal(t, 404, resp.Code, "No User")
 	}
 	userDB.Exec("TRUNCATE users;")
 }
