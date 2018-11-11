@@ -9,7 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"./models"
+	"github.com/anonanonymous/shellpay/services/accounts/models"
 )
 
 // response - outgoing data format
