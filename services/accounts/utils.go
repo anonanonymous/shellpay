@@ -2,7 +2,7 @@ package main
 
 import (
 	"crypto/hmac"
-	"crypto/sha512"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
@@ -55,9 +55,28 @@ func insertUser(usr *user.User) error {
 	return err
 }
 
+// updateUser - updates user properties
+func updateUser(usr *user.User, id string) error {
+	var totpKey *string
+	if usr.TwoFactorEnabled() {
+		totpKey = &usr.TOTPKey
+	}
+	_, err := userDB.Exec(`
+					UPDATE users
+					SET
+					email = $1,
+					verifier = $2,
+					totpKey = $3,
+					privateKey = $4
+					WHERE id = $5;`,
+		usr.Email, usr.Verifier, totpKey, hex.EncodeToString(usr.PrivateKey), id,
+	)
+	return err
+}
+
 // checkMAC reports whether messageMAC is a valid HMAC tag for message.
 func checkMAC(message, messageMAC, key []byte) bool {
-	mac := hmac.New(sha512.New, key)
+	mac := hmac.New(sha256.New, key)
 	mac.Write(message)
 	expectedMAC := mac.Sum(nil)
 	return hmac.Equal(messageMAC, expectedMAC)
@@ -74,15 +93,12 @@ func handleError(res http.ResponseWriter, text string, code int) {
 // getBody - retrieves the raw data recieved in a request
 func getBody(req *http.Request) ([]byte, error) {
 	rawData, err := ioutil.ReadAll(req.Body)
-	if err != nil {
-		return nil, err
-	}
-	return rawData, nil
+	return rawData, err
 }
 
 // sign - returns a HMAC signature for a message
 func sign(message string) string {
-	mac := hmac.New(sha512.New, []byte(MasterKey))
+	mac := hmac.New(sha256.New, []byte(MasterKey))
 	mac.Write([]byte(message))
 	return hex.EncodeToString(mac.Sum(nil))
 }
@@ -113,11 +129,30 @@ func getUser(userid string) (*user.User, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	usr.PrivateKey, err = hex.DecodeString(string(usr.PrivateKey))
+	if err != nil {
+		return nil, err
+	}
 	if email != nil {
 		usr.Email = string(email)
 	}
 	if totp != nil {
 		usr.TOTPKey = string(totp)
 	}
+
 	return &usr, nil
+}
+
+// getUserID - retrieves a user id from the database
+func getUserID(username string) (string, error) {
+	var uid string
+
+	row := userDB.QueryRow(`
+			SELECT id
+			FROM users
+			WHERE username = $1;`, username,
+	)
+	err := row.Scan(&uid)
+	return uid, err
 }

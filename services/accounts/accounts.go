@@ -15,7 +15,8 @@ func main() {
 
 	router.POST("/api/users", CreateUser)
 	router.GET("/api/users/:user_id", GetUser)
-	router.PUT("/api/users/:user_id", UpdateUser)
+	router.PUT("/api/users/:user_id/:setting", UpdateUser)
+	router.GET("/api/user/id/:username", GetUserID)
 	router.DELETE("/api/users/:user_id", DeleteUser)
 	log.Fatal(http.ListenAndServe(hostPort, router))
 }
@@ -28,6 +29,7 @@ func CreateUser(res http.ResponseWriter, req *http.Request, _ httprouter.Params)
 		handleError(res, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	if auth := isAuthorized(req, rawData); !auth {
 		handleError(res, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -43,7 +45,7 @@ func CreateUser(res http.ResponseWriter, req *http.Request, _ httprouter.Params)
 		return
 	}
 	if isRegistered(uname) {
-		handleError(res, "Username taken", http.StatusBadRequest)
+		handleError(res, "Username taken", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -93,6 +95,7 @@ func GetUser(res http.ResponseWriter, req *http.Request, params httprouter.Param
 		handleError(res, "Not found", http.StatusNotFound)
 		return
 	}
+
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(response{
 		Status: "ok",
@@ -102,23 +105,124 @@ func GetUser(res http.ResponseWriter, req *http.Request, params httprouter.Param
 			"verifier":   usr.Verifier,
 			"email":      usr.Email,
 			"identity":   usr.IH,
-			"privateKey": string(usr.PrivateKey),
+			"privateKey": hex.EncodeToString(usr.PrivateKey),
 			"totpKey":    usr.TOTPKey,
+		},
+	})
+}
+
+// GetUserID - retrieves the id from of a user
+func GetUserID(res http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	if auth := isAuthorized(req, nil); !auth {
+		handleError(res, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	userid, err := getUserID(params.ByName("username"))
+	if err != nil {
+		handleError(res, "Not found", http.StatusNotFound)
+		return
+	}
+
+	res.WriteHeader(http.StatusOK)
+	json.NewEncoder(res).Encode(response{
+		Status: "ok",
+		Result: map[string]string{
+			"id": userid,
 		},
 	})
 }
 
 // UpdateUser - changes the properties an existing user
 func UpdateUser(res http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	userid := params.ByName("user_id")
-	if userid == "" {
-		handleError(res, "Missing user id", http.StatusBadRequest)
+	var body request
+	var uid string
+
+	uid = params.ByName("user_id")
+	usr, err := getUser(uid)
+	if err != nil {
+		handleError(res, "Not found", http.StatusNotFound)
 		return
 	}
-	if auth := isAuthorized(req, nil); !auth {
+
+	rawData, err := getJSON(req)
+	if err != nil {
+		handleError(res, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if auth := isAuthorized(req, rawData); !auth {
 		handleError(res, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
+	if err = json.Unmarshal(rawData, &body); err != nil {
+		handleError(res, "Malformed data", http.StatusBadRequest)
+		return
+	}
+
+	if auth, err := usr.Verify(body["password"]); !auth || err != nil {
+		handleError(res, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	switch params.ByName("setting") {
+	case "password":
+		if pwd, ok := body["new_password"]; ok {
+			usr, err = user.NewUser(usr.Username, pwd, usr.Email)
+			if err != nil {
+				handleError(res, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			handleError(res, "No password provided", http.StatusBadRequest)
+			return
+		}
+	case "email":
+		if email, ok := body["email"]; ok {
+			usr, err = user.NewUser(usr.Username, body["password"], email)
+			if err != nil {
+				handleError(res, err.Error(), http.StatusBadRequest)
+				return
+			}
+		} else {
+			handleError(res, "No email provided", http.StatusBadRequest)
+			return
+		}
+	case "two_factor":
+		if val := body["two_factor"]; val == "true" {
+			if err = usr.EnableTwoFactor(); err != nil {
+				handleError(res, err.Error(), http.StatusConflict)
+				return
+			}
+		} else if val == "false" {
+			if err := usr.DisableTwoFactor(); err != nil {
+				handleError(res, err.Error(), http.StatusConflict)
+				return
+			}
+		} else {
+			handleError(res, "Invalid parameter", http.StatusBadRequest)
+			return
+		}
+	default:
+		handleError(res, "Invalid setting", http.StatusBadRequest)
+		return
+	}
+
+	if err := updateUser(usr, uid); err != nil {
+		handleError(res, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	res.WriteHeader(http.StatusOK)
+	json.NewEncoder(res).Encode(response{
+		Status: "ok",
+		Result: map[string]string{
+			"id":         uid,
+			"username":   usr.Username,
+			"verifier":   usr.Verifier,
+			"email":      usr.Email,
+			"identity":   usr.IH,
+			"privateKey": hex.EncodeToString(usr.PrivateKey),
+			"totpKey":    usr.TOTPKey,
+		},
+	})
 }
 
 // DeleteUser - removes an existing user
@@ -128,5 +232,4 @@ func DeleteUser(res http.ResponseWriter, req *http.Request, params httprouter.Pa
 		handleError(res, "Missing user id", http.StatusBadRequest)
 		return
 	}
-
 }
