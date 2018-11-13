@@ -1,7 +1,7 @@
 package user
 
 import (
-	"crypto/sha512"
+	"crypto/sha256"
 	"crypto/subtle"
 	"errors"
 	"regexp"
@@ -12,7 +12,7 @@ import (
 
 const (
 	nBits         = 1024 // prime-field size for srp verifier
-	otpSecretSize = 64
+	otpSecretSize = 40
 	domainName    = "shellpay.idk"
 )
 
@@ -55,7 +55,7 @@ func NewUser(uname, pwd, email string) (*User, error) {
 
 	ih, vfr := vh.Encode()
 
-	private := sha512.Sum512([]byte(vfr))
+	private := sha256.Sum256([]byte(vfr))
 
 	return &User{
 		Username:   uname,

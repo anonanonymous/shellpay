@@ -2,7 +2,7 @@ package user
 
 import (
 	"crypto/hmac"
-	"crypto/sha512"
+	"crypto/sha256"
 	"testing"
 )
 
@@ -32,10 +32,12 @@ func TestUser(t *testing.T) {
 			t.Errorf("Expected: %s got: %s", creds[0], u.Username)
 		} else if len(u.IH) != 64 {
 			t.Error("Bad User Identity value")
-		} else if len(u.PrivateKey) != 64 {
+		} else if len(u.PrivateKey) != 32 {
 			t.Error("Bad Private Key")
-		} else if pk := sha512.Sum512([]byte(u.Verifier)); !hmac.Equal(pk[:], u.PrivateKey) {
+		} else if pk := sha256.Sum256([]byte(u.Verifier)); !hmac.Equal(pk[:], u.PrivateKey) {
 			t.Error("Invalid Private Key")
+		} else if len(u.TOTPKey) != 0 {
+			t.Error("TOTP Secret not empty")
 		}
 
 		ok, err := u.Verify(creds[1])
@@ -57,7 +59,7 @@ func TestUser(t *testing.T) {
 	}
 
 	u, _ = NewUser("james", "bond", "")
-	if err := u.EnableTwoFactor(); err != nil || len(u.TOTPKey) == 0 {
+	if err := u.EnableTwoFactor(); err != nil || len(u.TOTPKey) != 64 {
 		t.Fail()
 	}
 	if err := u.EnableTwoFactor(); err == nil || len(u.TOTPKey) == 0 {
