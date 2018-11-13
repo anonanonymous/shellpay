@@ -3,6 +3,7 @@ package user
 import (
 	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/hex"
 	"errors"
 	"regexp"
 
@@ -18,6 +19,7 @@ const (
 
 // User - A User object
 type User struct {
+	ID         string // srp identity
 	Username   string
 	Verifier   string
 	IH         string // srp identity
@@ -28,6 +30,7 @@ type User struct {
 
 // NewUser - creates a new user
 func NewUser(uname, pwd, email string) (*User, error) {
+	usr := &User{}
 	if len(uname) < 1 || len(pwd) < 1 {
 		return nil, errors.New("Username/Password too short")
 	}
@@ -36,11 +39,8 @@ func NewUser(uname, pwd, email string) (*User, error) {
 		return nil, errors.New("Leading/Trailing spaces in username")
 	}
 
-	if len(email) != 0 {
-		matched, err := regexp.MatchString("(\\w+?@\\w+?\\x2E.+)", email)
-		if err != nil || !matched {
-			return nil, errors.New("Invalid Email")
-		}
+	if !usr.SetEmail(email) {
+		return nil, errors.New("Invalid Email")
 	}
 
 	srpEnv, err := srp.New(nBits)
@@ -57,13 +57,12 @@ func NewUser(uname, pwd, email string) (*User, error) {
 
 	private := sha256.Sum256([]byte(vfr))
 
-	return &User{
-		Username:   uname,
-		Verifier:   vfr,
-		IH:         ih,
-		Email:      email,
-		PrivateKey: private[:],
-	}, nil
+	usr.Username = uname
+	usr.Verifier = vfr
+	usr.IH = ih
+	usr.PrivateKey = private[:]
+
+	return usr, nil
 }
 
 // Verify - checks if password is valid
@@ -153,4 +152,29 @@ func (u *User) EnableTwoFactor() error {
 
 	u.TOTPKey = key.Secret()
 	return nil
+}
+
+// SetEmail - sets the users' email
+func (u *User) SetEmail(email string) bool {
+	if len(email) != 0 {
+		matched, err := regexp.MatchString("(\\w+?@\\w+?\\x2E.+)", email)
+		if err != nil || !matched {
+			return false
+		}
+	}
+	u.Email = email
+	return true
+}
+
+// Jsonify - returns a json representation of the user
+func (u User) Jsonify() map[string]string {
+	return map[string]string{
+		"id":         u.ID,
+		"username":   u.Username,
+		"verifier":   u.Verifier,
+		"email":      u.Email,
+		"identity":   u.IH,
+		"privateKey": hex.EncodeToString(u.PrivateKey),
+		"totpKey":    u.TOTPKey,
+	}
 }
