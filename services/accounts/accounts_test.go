@@ -18,6 +18,7 @@ func Router() *httprouter.Router {
 	router.GET("/api/users/:user_id", GetUser)
 	router.GET("/api/user/id/:username", GetUserID)
 	router.PUT("/api/users/:user_id/:setting", UpdateUser)
+	router.DELETE("/api/users/:user_id", DeleteUser)
 	return router
 }
 
@@ -111,6 +112,7 @@ func TestUpdateUser(t *testing.T) {
 	goodSettings := [][]string{
 		{"1", "password", `{"password":"pass", "new_password":"pass101"}`},
 		{"2", "email", `{"password":"pass", "email":"new@email.com"}`},
+		{"2", "email", `{"password":"pass", "email":""}`},
 		{"3", "two_factor", `{"password":"pass", "two_factor":"true"}`},
 		{"3", "two_factor", `{"password":"pass", "two_factor":"false"}`},
 		{"4", "email", `{"password":"h4ck3r", "email":"pass@101.co"}`},
@@ -146,7 +148,26 @@ func TestUpdateUser(t *testing.T) {
 		resp := httptest.NewRecorder()
 		Router().ServeHTTP(resp, request)
 		json.Unmarshal([]byte(resp.Body.String()), &body)
-		assert.Equal(t, badCode[i], resp.Code, "User setting changed")
+		assert.Equal(t, badCode[i], resp.Code, "OK")
 	}
-	userDB.Exec("TRUNCATE users;")
+}
+
+func TestDeleteUser(t *testing.T) {
+	goodUIDS := []string{"1", "2", "3", "4"}
+	badUIDS := []string{"-1", "io2-", "; TRUNCATE users;", "0", ""}
+	for _, v := range goodUIDS {
+		request, _ := http.NewRequest("DELETE", "/api/users/"+v, nil)
+		request.SetBasicAuth("", sign(""))
+		resp := httptest.NewRecorder()
+		Router().ServeHTTP(resp, request)
+		assert.Equal(t, 200, resp.Code, "Deleted user")
+	}
+
+	for _, v := range badUIDS {
+		request, _ := http.NewRequest("DELETE", "/api/users/"+v, nil)
+		request.SetBasicAuth("", sign(""))
+		resp := httptest.NewRecorder()
+		Router().ServeHTTP(resp, request)
+		assert.Equal(t, 404, resp.Code, "No user with this id")
+	}
 }

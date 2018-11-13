@@ -156,3 +156,13 @@ func getUserID(username string) (string, error) {
 	err := row.Scan(&uid)
 	return uid, err
 }
+
+// deleteUser - deletes a user from the database
+func deleteUser(userid string) error {
+	_, err := userDB.Exec(`
+			DELETE FROM
+			users
+			WHERE id = $1;`, userid,
+	)
+	return err
+}

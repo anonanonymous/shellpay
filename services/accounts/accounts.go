@@ -99,15 +99,7 @@ func GetUser(res http.ResponseWriter, req *http.Request, params httprouter.Param
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(response{
 		Status: "ok",
-		Result: map[string]string{
-			"id":         userid,
-			"username":   usr.Username,
-			"verifier":   usr.Verifier,
-			"email":      usr.Email,
-			"identity":   usr.IH,
-			"privateKey": hex.EncodeToString(usr.PrivateKey),
-			"totpKey":    usr.TOTPKey,
-		},
+		Result: usr.Jsonify(),
 	})
 }
 
@@ -177,9 +169,8 @@ func UpdateUser(res http.ResponseWriter, req *http.Request, params httprouter.Pa
 		}
 	case "email":
 		if email, ok := body["email"]; ok {
-			usr, err = user.NewUser(usr.Username, body["password"], email)
-			if err != nil {
-				handleError(res, err.Error(), http.StatusBadRequest)
+			if !usr.SetEmail(email) {
+				handleError(res, "Invalid email", http.StatusBadRequest)
 				return
 			}
 		} else {
@@ -213,15 +204,7 @@ func UpdateUser(res http.ResponseWriter, req *http.Request, params httprouter.Pa
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(response{
 		Status: "ok",
-		Result: map[string]string{
-			"id":         uid,
-			"username":   usr.Username,
-			"verifier":   usr.Verifier,
-			"email":      usr.Email,
-			"identity":   usr.IH,
-			"privateKey": hex.EncodeToString(usr.PrivateKey),
-			"totpKey":    usr.TOTPKey,
-		},
+		Result: usr.Jsonify(),
 	})
 }
 
@@ -232,4 +215,23 @@ func DeleteUser(res http.ResponseWriter, req *http.Request, params httprouter.Pa
 		handleError(res, "Missing user id", http.StatusBadRequest)
 		return
 	}
+	if auth := isAuthorized(req, nil); !auth {
+		handleError(res, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	usr, err := getUser(uid)
+	if err != nil {
+		handleError(res, "Not found", http.StatusNotFound)
+		return
+	}
+	if err = deleteUser(uid); err != nil {
+		handleError(res, "Internal error", http.StatusInternalServerError)
+		return
+	}
+
+	res.WriteHeader(http.StatusOK)
+	json.NewEncoder(res).Encode(response{
+		Status: "ok",
+		Result: usr.Jsonify(),
+	})
 }
