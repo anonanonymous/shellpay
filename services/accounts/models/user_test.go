@@ -1,9 +1,10 @@
 package user
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
 	"testing"
+	"time"
+
+	"github.com/pquerna/otp/totp"
 )
 
 func TestUser(t *testing.T) {
@@ -32,10 +33,6 @@ func TestUser(t *testing.T) {
 			t.Errorf("Expected: %s got: %s", creds[0], u.Username)
 		} else if len(u.IH) != 64 {
 			t.Error("Bad User Identity value")
-		} else if len(u.PrivateKey) != 32 {
-			t.Error("Bad Private Key")
-		} else if pk := sha256.Sum256([]byte(u.Verifier)); !hmac.Equal(pk[:], u.PrivateKey) {
-			t.Error("Invalid Private Key")
 		} else if len(u.TOTPKey) != 0 {
 			t.Error("TOTP Secret not empty")
 		}
@@ -49,6 +46,23 @@ func TestUser(t *testing.T) {
 		if ok || err == nil {
 			t.Errorf("Hackerman can login")
 		}
+
+		jsMap := u.Jsonify()
+		if jsMap["username"] != u.Username {
+			t.Error("Username does not match")
+		}
+		if jsMap["identity"] != u.IH {
+			t.Error("Identities do not match")
+		}
+		if jsMap["totpKey"] != u.TOTPKey {
+			t.Error("TOTP Key does not match")
+		}
+		if jsMap["verifier"] != u.Verifier {
+			t.Error("Verifier does not match")
+		}
+		if jsMap["email"] != u.Email {
+			t.Error("Email does not match")
+		}
 	}
 
 	for _, creds := range badUsers {
@@ -59,16 +73,30 @@ func TestUser(t *testing.T) {
 	}
 
 	u, _ = NewUser("james", "bond", "")
-	if err := u.EnableTwoFactor(); err != nil || len(u.TOTPKey) != 64 {
+	key, _ := totp.Generate(totp.GenerateOpts{
+		Issuer:      domainName,
+		AccountName: ":",
+		SecretSize:  otpSecretSize,
+	})
+
+	secret := key.Secret()
+	code, _ := totp.GenerateCode(secret, time.Now())
+	if err := u.EnableTwoFactor(secret, code); err != nil || len(u.TOTPKey) != 64 {
 		t.Fail()
 	}
-	if err := u.EnableTwoFactor(); err == nil || len(u.TOTPKey) == 0 {
+
+	code, _ = totp.GenerateCode(secret, time.Now())
+	if err := u.EnableTwoFactor(secret, code); err == nil || len(u.TOTPKey) == 0 {
 		t.Fail()
 	}
-	if err := u.DisableTwoFactor(); err != nil || len(u.TOTPKey) != 0 {
+
+	code, _ = totp.GenerateCode(secret, time.Now())
+	if err := u.DisableTwoFactor(code); err != nil || len(u.TOTPKey) != 0 {
 		t.Fail()
 	}
-	if err := u.DisableTwoFactor(); err == nil || len(u.TOTPKey) != 0 {
+
+	code, _ = totp.GenerateCode(secret, time.Now())
+	if err := u.DisableTwoFactor(code); err == nil || len(u.TOTPKey) != 0 {
 		t.Fail()
 	}
 }

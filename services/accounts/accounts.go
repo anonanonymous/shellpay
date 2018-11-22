@@ -1,12 +1,12 @@
 package main
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"log"
 	"net/http"
 
-	"github.com/anonanonymous/shellpay/services/accounts/models"
+	"./models"
+	//"github.com/anonanonymous/shellpay/services/accounts/models"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -15,8 +15,8 @@ func main() {
 
 	router.POST("/api/users", CreateUser)
 	router.GET("/api/users/:user_id", GetUser)
-	router.PUT("/api/users/:user_id/:setting", UpdateUser)
 	router.GET("/api/user/id/:username", GetUserID)
+	router.PUT("/api/users/:user_id/:setting", UpdateUser)
 	router.DELETE("/api/users/:user_id", DeleteUser)
 	log.Fatal(http.ListenAndServe(hostPort, router))
 }
@@ -56,6 +56,10 @@ func CreateUser(res http.ResponseWriter, req *http.Request, _ httprouter.Params)
 	}
 
 	email, ok := data["email"]
+	if !ok {
+		handleError(res, "Missing email", http.StatusBadRequest)
+		return
+	}
 	usr, err := user.NewUser(uname, pwd, email)
 	if err != nil {
 		handleError(res, err.Error(), http.StatusInternalServerError)
@@ -70,11 +74,10 @@ func CreateUser(res http.ResponseWriter, req *http.Request, _ httprouter.Params)
 	json.NewEncoder(res).Encode(response{
 		Status: "ok",
 		Result: map[string]string{
-			"username":   usr.Username,
-			"verifier":   usr.Verifier,
-			"email":      usr.Email,
-			"identity":   usr.IH,
-			"privateKey": hex.EncodeToString(usr.PrivateKey),
+			"username": usr.Username,
+			"verifier": usr.Verifier,
+			"email":    usr.Email,
+			"identity": usr.IH,
 		},
 	})
 }
@@ -151,41 +154,50 @@ func UpdateUser(res http.ResponseWriter, req *http.Request, params httprouter.Pa
 		return
 	}
 
-	if auth, err := usr.Verify(body["password"]); !auth || err != nil {
-		handleError(res, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
 	switch params.ByName("setting") {
 	case "password":
-		if pwd, ok := body["new_password"]; ok {
-			usr, err = user.NewUser(usr.Username, pwd, usr.Email)
-			if err != nil {
-				handleError(res, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		} else {
-			handleError(res, "No password provided", http.StatusBadRequest)
+		pwd, ok := body["password"]
+		if auth, err := usr.Verify(pwd); !ok || !auth || err != nil {
+			handleError(res, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		pwd, ok = body["new_password"]
+		if !ok {
+			handleError(res, "Invalid new password", http.StatusInternalServerError)
+			return
+		}
+		usr, err = user.NewUser(usr.Username, pwd, usr.Email)
+		if err != nil {
+			handleError(res, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case "email":
-		if email, ok := body["email"]; ok {
-			if !usr.SetEmail(email) {
-				handleError(res, "Invalid email", http.StatusBadRequest)
-				return
-			}
-		} else {
+		if !usr.SetEmail(body["email"]) {
+			handleError(res, "Invalid email", http.StatusBadRequest)
+			return
+		} else if _, ok := body["email"]; !ok {
 			handleError(res, "No email provided", http.StatusBadRequest)
 			return
 		}
 	case "two_factor":
-		if val := body["two_factor"]; val == "true" {
-			if err = usr.EnableTwoFactor(); err != nil {
-				handleError(res, err.Error(), http.StatusConflict)
+		val, ok := body["active"]
+		if !ok {
+			handleError(res, "Missing setting", http.StatusBadRequest)
+			return
+		}
+		code, ok := body["code"]
+		if !ok {
+			handleError(res, "Missing code", http.StatusBadRequest)
+			return
+		}
+		if secret, ok := body["secret"]; val == "true" && ok {
+			if err = usr.EnableTwoFactor(secret, code); err != nil {
+				handleError(res, err.Error(), http.StatusForbidden)
 				return
 			}
 		} else if val == "false" {
-			if err := usr.DisableTwoFactor(); err != nil {
-				handleError(res, err.Error(), http.StatusConflict)
+			if err := usr.DisableTwoFactor(code); err != nil {
+				handleError(res, err.Error(), http.StatusForbidden)
 				return
 			}
 		} else {
@@ -201,6 +213,7 @@ func UpdateUser(res http.ResponseWriter, req *http.Request, params httprouter.Pa
 		handleError(res, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(response{
 		Status: "ok",
@@ -219,6 +232,7 @@ func DeleteUser(res http.ResponseWriter, req *http.Request, params httprouter.Pa
 		handleError(res, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
+
 	usr, err := getUser(uid)
 	if err != nil {
 		handleError(res, "Not found", http.StatusNotFound)

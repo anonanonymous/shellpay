@@ -10,7 +10,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/anonanonymous/shellpay/services/accounts/models"
+	"./models"
+	//"github.com/anonanonymous/shellpay/services/accounts/models"
 )
 
 // response - outgoing data format
@@ -48,9 +49,9 @@ func isRegistered(username string) bool {
 func insertUser(usr *user.User) error {
 	_, err := userDB.Exec(`
 					INSERT INTO
-					users (username, verifier, ih, email, privateKey)
-					VALUES ($1, $2, $3, $4, $5);`,
-		usr.Username, usr.Verifier, usr.IH, usr.Email, hex.EncodeToString(usr.PrivateKey),
+					users (username, verifier, ih, email)
+					VALUES ($1, $2, $3, $4);`,
+		usr.Username, usr.Verifier, usr.IH, usr.Email,
 	)
 	return err
 }
@@ -66,10 +67,9 @@ func updateUser(usr *user.User, id string) error {
 					SET
 					email = $1,
 					verifier = $2,
-					totpKey = $3,
-					privateKey = $4
-					WHERE id = $5;`,
-		usr.Email, usr.Verifier, totpKey, hex.EncodeToString(usr.PrivateKey), id,
+					totpKey = $3
+					WHERE id = $4;`,
+		usr.Email, usr.Verifier, totpKey, id,
 	)
 	return err
 }
@@ -90,7 +90,7 @@ func handleError(res http.ResponseWriter, text string, code int) {
 	})
 }
 
-// getBody - retrieves the raw data recieved in a request
+// getBody - retrieves the raw data received in a request
 func getBody(req *http.Request) ([]byte, error) {
 	rawData, err := ioutil.ReadAll(req.Body)
 	return rawData, err
@@ -117,23 +117,19 @@ func getUser(userid string) (*user.User, error) {
 	var email, totp []byte
 
 	row := userDB.QueryRow(`
-			SELECT ih, verifier, username, email, privateKey, totpKey
+			SELECT id, ih, verifier, username, email, totpKey
 			FROM users
 			WHERE id = $1;`, userid,
 	)
 	usr := user.User{}
 	err := row.Scan(
-		&usr.IH, &usr.Verifier, &usr.Username,
-		&email, &usr.PrivateKey, &totp,
+		&usr.ID, &usr.IH, &usr.Verifier, &usr.Username,
+		&email, &totp,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	usr.PrivateKey, err = hex.DecodeString(string(usr.PrivateKey))
-	if err != nil {
-		return nil, err
-	}
 	if email != nil {
 		usr.Email = string(email)
 	}

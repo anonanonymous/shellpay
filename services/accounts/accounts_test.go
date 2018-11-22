@@ -7,8 +7,10 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/pquerna/otp/totp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,10 +36,11 @@ func TestCreateUser(t *testing.T) {
 		`{"username":"anon2", "password":"", "email":"justbe@your.self"}`,
 		`{"username":"", "password":"pass", "email":"justbe@your.self"}`,
 		`{ame":"", "password":"pass", "email":"justbe@your.self"}`,
-		`{"username":"anonymous", "password":"h4ck3r", "email":""}`, // dupliate db entry
+		`{"username":"anonymous", "password":"h4ck3r", "email":""}`,
+		`{"username":"anonmous", "password":"h4ck3r"}`,
 	}
-	badRes := []string{"Missing password", "Missing username", "Malformed data", "Username taken"}
-	badCode := []int{400, 400, 400, 405}
+	badRes := []string{"Missing password", "Missing username", "Malformed data", "Username taken", "Missing email"}
+	badCode := []int{400, 400, 400, 405, 400}
 
 	for _, v := range goodJSON {
 		request, _ := http.NewRequest("POST", "/api/users", bytes.NewBufferString(v))
@@ -109,28 +112,38 @@ func TestGetUserID(t *testing.T) {
 
 func TestUpdateUser(t *testing.T) {
 	var body response
+
+	key, _ := totp.Generate(totp.GenerateOpts{
+		Issuer:      "shellpay.idk",
+		AccountName: ":",
+		SecretSize:  40,
+	})
+	secret := key.Secret()
+	code, _ := totp.GenerateCode(secret, time.Now())
 	goodSettings := [][]string{
 		{"1", "password", `{"password":"pass", "new_password":"pass101"}`},
-		{"2", "email", `{"password":"pass", "email":"new@email.com"}`},
-		{"2", "email", `{"password":"pass", "email":""}`},
-		{"3", "two_factor", `{"password":"pass", "two_factor":"true"}`},
-		{"3", "two_factor", `{"password":"pass", "two_factor":"false"}`},
-		{"4", "email", `{"password":"h4ck3r", "email":"pass@101.co"}`},
+		{"2", "email", `{"email":"new@email.com"}`},
+		{"2", "email", `{"email":""}`},
+		{"3", "two_factor", `{"active":"true", "secret":"` + secret + `", "code":"` + code + `"}`},
+		{"3", "two_factor", `{"active":"false", "code":"` + code + `"}`},
+		{"4", "email", `{"email":"pass@101.co"}`},
 	}
 
 	badSettings := [][]string{
 		{"1", "password", `{"password":"pass1", "new_password":"pass101"}`},
+		{"1", "password", `{"password":"pass", "":"pass101"}`},
 		{"1", "password", `{"password":"pass1", "new_password":""}`},
-		{"2", "email", `{"password":"pass", "email":"newemailcom"}`},
-		{"2", "email", `{"password":"pass", "":"newemailcom"}`},
-		{"3", "two_factor", `{"password":"pass", "two_factor":"false"}`},
-		{"3", "two_factor", `{"password":"pass", "two_factor":"fa"}`},
+		{"2", "email", `{"email":"newemailcom"}`},
+		{"2", "email", `{"":"newemailcom"}`},
+		{"3", "two_factor", `"active":"tue", "secret":"` + secret + `", "code":"` + code + `"}`},
+		{"3", "two_factor", `{"active":"alse", "":"` + code + `"}`},
+		{"3", "two_factor", `{"":"pass", "":""}`},
 		{"3", "two_factor", `{"password":"pass", "tw_factor":"fa"}`},
 		{"4", "email", `assword":"h4ck3r", "email":"pass@101.co"}`},
 		{"4", "eail", `assword":"h4ck3r", "email":"pass@101.co"}`},
 		{"4", "email", `password":"h4ck3r", "emal":"pass@101.co"}`},
 	}
-	badCode := []int{401, 401, 400, 400, 409, 400, 400, 400, 400, 400}
+	badCode := []int{401, 401, 401, 400, 400, 400, 400, 400, 400, 400, 400, 400}
 
 	for _, v := range goodSettings {
 		request, _ := http.NewRequest("PUT", "/api/users/"+v[0]+"/"+v[1], bytes.NewBufferString(v[2]))
@@ -138,8 +151,7 @@ func TestUpdateUser(t *testing.T) {
 		resp := httptest.NewRecorder()
 		Router().ServeHTTP(resp, request)
 		json.Unmarshal([]byte(resp.Body.String()), &body)
-		assert.Len(t, body.Result["privateKey"], 64, "Valid length")
-		assert.Equal(t, 200, resp.Code, "User setting changed")
+		assert.Equal(t, 200, resp.Code, "User setting changed", v)
 	}
 
 	for i, v := range badSettings {
@@ -148,13 +160,13 @@ func TestUpdateUser(t *testing.T) {
 		resp := httptest.NewRecorder()
 		Router().ServeHTTP(resp, request)
 		json.Unmarshal([]byte(resp.Body.String()), &body)
-		assert.Equal(t, badCode[i], resp.Code, "OK")
+		assert.Equal(t, badCode[i], resp.Code, "OK", i)
 	}
 }
 
 func TestDeleteUser(t *testing.T) {
 	goodUIDS := []string{"1", "2", "3", "4"}
-	badUIDS := []string{"-1", "io2-", "; TRUNCATE users;", "0", ""}
+	badUIDS := []string{"1", "io2-", "; TRUNCATE users;", "0", ""}
 	for _, v := range goodUIDS {
 		request, _ := http.NewRequest("DELETE", "/api/users/"+v, nil)
 		request.SetBasicAuth("", sign(""))

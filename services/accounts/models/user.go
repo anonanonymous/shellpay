@@ -1,9 +1,7 @@
 package user
 
 import (
-	"crypto/sha256"
 	"crypto/subtle"
-	"encoding/hex"
 	"errors"
 	"regexp"
 
@@ -19,13 +17,12 @@ const (
 
 // User - A User object
 type User struct {
-	ID         string // srp identity
-	Username   string
-	Verifier   string
-	IH         string // srp identity
-	Email      string
-	TOTPKey    string // 2FA secret key
-	PrivateKey []byte // HMAC private key
+	ID       string
+	Username string
+	Verifier string
+	IH       string // srp identity
+	Email    string
+	TOTPKey  string // 2FA secret key
 }
 
 // NewUser - creates a new user
@@ -55,12 +52,9 @@ func NewUser(uname, pwd, email string) (*User, error) {
 
 	ih, vfr := vh.Encode()
 
-	private := sha256.Sum256([]byte(vfr))
-
 	usr.Username = uname
 	usr.Verifier = vfr
 	usr.IH = ih
-	usr.PrivateKey = private[:]
 
 	return usr, nil
 }
@@ -125,36 +119,31 @@ func (u User) TwoFactorEnabled() bool {
 }
 
 // DisableTwoFactor - removes TOTP secret from the user
-func (u *User) DisableTwoFactor() error {
+func (u *User) DisableTwoFactor(code string) error {
 	if !u.TwoFactorEnabled() {
 		return errors.New("2FA already disabled")
 	}
 
-	u.TOTPKey = ""
-	return nil
+	if totp.Validate(code, u.TOTPKey) {
+		u.TOTPKey = ""
+		return nil
+	}
+	return errors.New("Invalid code")
 }
 
 // EnableTwoFactor - creates a TOTP secret for the user
-func (u *User) EnableTwoFactor() error {
+func (u *User) EnableTwoFactor(secret, code string) error {
 	if u.TwoFactorEnabled() {
 		return errors.New("2FA already enabled")
 	}
-
-	key, err := totp.Generate(totp.GenerateOpts{
-		Issuer:      domainName,
-		AccountName: ":",
-		SecretSize:  otpSecretSize,
-	})
-
-	if err != nil {
-		return err
+	if totp.Validate(code, secret) {
+		u.TOTPKey = secret
+		return nil
 	}
-
-	u.TOTPKey = key.Secret()
-	return nil
+	return errors.New("Invalid code")
 }
 
-// SetEmail - sets the users' email
+// SetEmail - sets the users email
 func (u *User) SetEmail(email string) bool {
 	if len(email) != 0 {
 		matched, err := regexp.MatchString("(\\w+?@\\w+?\\x2E.+)", email)
@@ -169,12 +158,11 @@ func (u *User) SetEmail(email string) bool {
 // Jsonify - returns a json representation of the user
 func (u User) Jsonify() map[string]string {
 	return map[string]string{
-		"id":         u.ID,
-		"username":   u.Username,
-		"verifier":   u.Verifier,
-		"email":      u.Email,
-		"identity":   u.IH,
-		"privateKey": hex.EncodeToString(u.PrivateKey),
-		"totpKey":    u.TOTPKey,
+		"id":       u.ID,
+		"username": u.Username,
+		"verifier": u.Verifier,
+		"email":    u.Email,
+		"identity": u.IH,
+		"totpKey":  u.TOTPKey,
 	}
 }
