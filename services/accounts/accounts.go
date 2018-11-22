@@ -5,8 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"./models"
-	//"github.com/anonanonymous/shellpay/services/accounts/models"
+	"github.com/anonanonymous/shellpay/services/accounts/models"
 	"github.com/julienschmidt/httprouter"
 )
 

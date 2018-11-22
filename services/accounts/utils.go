@@ -10,8 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"./models"
-	//"github.com/anonanonymous/shellpay/services/accounts/models"
+	"github.com/anonanonymous/shellpay/services/accounts/models"
 )
 
 // response - outgoing data format
@@ -90,7 +89,7 @@ func handleError(res http.ResponseWriter, text string, code int) {
 	})
 }
 
-// getBody - retrieves the raw data received in a request
+// getBody - retrieves the raw data recieved in a request
 func getBody(req *http.Request) ([]byte, error) {
 	rawData, err := ioutil.ReadAll(req.Body)
 	return rawData, err
