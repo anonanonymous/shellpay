@@ -21,20 +21,23 @@ proc is_ready(client: HttpClient, host="127.0.0.1", port, password: string): boo
 #[ handler - http handler for wallet service requests ]#
 proc handler(req: Request) {.async.} =
     case req.url.path
-    of "/":
+    of "/json_rpc":
+        let max_attempts = 10
         var i = 1
         var client = newHttpClient(timeout = 1000)
         client.headers = newHttpHeaders({"Content-Type": "application/json"})
-        while true:
+
+        for _ in 0 .. max_attempts:
             echo paramStr(i)
             if client.is_ready(port = paramStr(i), password = getEnv("RPC_PASS")):
                 break
             i = if i < paramCount(): i + 1 else: 1
             sleep(500)
-        let headers = newHttpHeaders({"Content-Type": "application/json", "Location": "http://localhost:"&paramStr(i)&"/json_rpc"})
-        await req.respond(Http307, req.body, headers)
+
+        let headers = newHttpHeaders({"Location": "http://localhost:"&paramStr(i)&"/json_rpc"})
+        await req.respond(Http307, "", headers)
     else:
-        discard
+        await req.respond(Http404, "")
 
 #[ main - Entry point ]#
 proc main() =
