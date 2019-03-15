@@ -129,7 +129,7 @@ def ipn():
 
     return jsonify({})
 ```
-## Type - `invoice created`
+Type - `invoice created`  
 This is sent when an invoice is created
 ```
 Payload:
@@ -142,35 +142,32 @@ Payload:
     "order_id": "the order id",
     "public_key": "PUBLIC KEY",
 }
-
 ```
-## Type - `paid`
+Type - `paid`  
 This is sent when an invoice is paid
 ```
 Payload:
 {
-    'type': 'invoice created',
+    "type": "paid",
     "currency_amount": "amount due in the original currency",  
     "currency_code": "the currency code",
     "custom": Merchant specified custom data.
     "merchant_address": 'the merchant's address',
-    'order_id': ':D',
-    'public_key': 'PUBLIC KEY',
+    "order_id": "the order id",
+    "public_key": "PUBLIC KEY",
 }
-
 ```
-## Type - `expired`
+Type - `expired`  
 This is sent when an invoice is expires
 ```
 Payload:
 {
-    'type': 'invoice created',
+    "type": "expired",
     "currency_amount": "amount due in the original currency",  
     "currency_code": "the currency code",
     "custom": Merchant specified custom data.
     "merchant_address": 'the merchant's address',
-    'order_id': ':D',
-    'public_key': 'PUBLIC KEY',
+    "order_id": "the order id",
+    "public_key": "PUBLIC KEY",
 }
-
 ```
