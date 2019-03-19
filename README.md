@@ -8,7 +8,7 @@ Turtlecoin payment gateway
 
 All `POST` requests are limited to 1KiB of data
 
-## `POST` shellpay.pw/api/keys  
+## `POST` shellpay.ml/api/keys  
 Generates a key pair for the merchant.  
 All payment notifications sent to the merchant are signed with HMAC-SHA256 using the private key.
 ```
@@ -33,10 +33,10 @@ HTTP 4xx
 ```
 Example
 ```
-curl -d '{"address": "TRTLuySpDqd2fcvq5vx7Jiayw6yao7JHXFPuia5V83cVREtQSKyvWpxX9vamnUcG35BkQy6VfwUy5CsV9YNomioPGGyVhK3YXLq"}' shellpay.pw/api/keys
+curl -d '{"address": "TRTLuySpDqd2fcvq5vx7Jiayw6yao7JHXFPuia5V83cVREtQSKyvWpxX9vamnUcG35BkQy6VfwUy5CsV9YNomioPGGyVhK3YXLq"}' shellpay.ml/api/keys
 ```
 
-## `POST` shellpay.pw/api/invoice  
+## `POST` shellpay.ml/api/invoice  
 This creates an invoice. Sign the request body using HMAC-SHA256 with your private key so shellpay can verify request validity.  
 Then place the hmac signature in the request header value "HMAC-SIGNATURE"  
 ```
@@ -81,11 +81,11 @@ invoice = {
     'custom': "{'item_name': 'one tall coffee'}",
     'public_key': "PUBLIC KEY"
 }
-response = post('https://shellpay.pw/api/invoice', json=invoice,
+response = post('https://shellpay.ml/api/invoice', json=invoice,
                 headers={'HMAC-SIGNATURE': hmac_sign(json.dumps(invoice), 'PRIVATE KEY')})
 ```
 
-## `GET` shellpay.pw/api/invoice/:id  
+## `GET` shellpay.ml/api/invoice/:id  
 Gets invoice status. `id` is the `payment_id` of the invoice
 ```
 Params:
