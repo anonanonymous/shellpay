@@ -1,0 +1,171 @@
+
+<html>
+
+<head>
+  <title>shellpay&trade;</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css"
+    integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w" crossorigin="anonymous">
+  <link rel="stylesheet" type="text/css" href="/assets/css/styles.css">
+  <link rel="icon" href="/assets/images/icon.png" type="image/x-icon">
+  <link rel="stylesheet" type="" href="/assets/css/styles.css">
+  <link rel="stylesheet" type="text/css" href="/assets/css/docs.css">
+</head>
+
+<body>
+  <header>
+    <div id="logo">
+      <a href="/"></a>
+    </div>
+  </header>
+  <div id="main-container">
+    <div id="body">
+      <div>
+        <br>
+        <h2>ShellPay API</h2>
+		<p><b>Note</b> When sending POST requests, please sign the raw request data using SHA256-HMAC with your private key and place this signature in the 'HMAC-SIGNATURE' header. This is how we  authenticate your requests. If you omit or send an invalid signature, you will receive an error</p>
+        <p><b>API Root:</b> <code>https://shellpay/api</code></p>
+        <table>
+          <code><b>POST</b> /api/keys</code>
+          <p>Creates public and private keys. Keys expire after the expiry date</p>
+          <tbody>
+            <tr>
+              <th>Parameters</th>
+              <th>Description</th>
+              <th>Type</th>
+            </tr>
+            <tr>
+              <td>address</td>
+              <td>Your TurtleCoin address, standard or integrated address</td>
+              <td>string</td>
+            </tr>
+          </tbody>
+        </table>
+        Example Payload
+        <pre><code>
+{
+  "address": "TRTLuySpDqd2fcvq5vx7Jiayw6yao7JHXFPuia5V83cVREtQSKyvWpxX9vamnUcG35BkQy6VfwUy5CsV9YNomioPGGyVhK3YXLq"
+}
+</code></pre>
+        Response
+        <pre><code>
+{
+  "status": "ok" or an error message ,
+  "result": {
+    "expiry": # key expiration date (unix timestamp)
+    "private_key": 128 character string, # your private key
+    "public_key": 64 character string # your public key
+  }
+}
+</code></pre>
+        <hr>
+        <table>
+          <code><b>POST</b> /api/invoice</code>
+          <p>Creates a payment invoice</p>
+          <tbody>
+            <tr>
+              <th>Parameters</th>
+              <th>Description</th>
+              <th>Type</th>
+            </tr>
+            <tr>
+              <td>ipn_uri</td>
+              <td>This is where ShellPay will send the payment notification for this invoice</td>
+              <td>string</td>
+            </tr>
+            <tr>
+              <td>currency_code</td>
+              <td>The original currency of the transaction. See supported currency codes</td>
+              <td>string</td>
+            </tr>
+            <tr>
+              <td>currency_amount</td>
+              <td>The transaction cost in the original curency</td>
+              <td>float64</td>
+            </tr>
+            <tr>
+              <td>order_id</td>
+              <td>Merchant Specified id for this transaction</td>
+              <td>string</td>
+            </tr>
+            <tr>
+              <td>custom</td>
+              <td>Merchant Specified custom data</td>
+              <td>string</td>
+            </tr>
+            <tr>
+              <td>public_key</td>
+              <td>The public key of a merchant</td>
+              <td>string</td>
+            </tr>
+          </tbody>
+        </table>
+        Example Payload
+        <pre><code>
+{
+    'ipn_uri': 'https://starbucks.com/payments/',
+    'currency_amount': 10,  
+    'currency_code': 'usd',
+    'order_id': '123456',   
+    'custom': "{'item_name': 'one tall coffee'}",
+    'public_key': "799ca1122df0f885a9f0a256129856e1ba3b001230332e6ea2a5912e8a2caf1e"
+}
+</code></pre>
+        Response
+        <pre><code>
+{
+    "status": "ok" or error message,
+    "result":
+    {
+        "status": invoice status - unpaid/processing/expired/paid,
+        "timestamp": the current unix timestamp,
+        "payment_id": 64 character string, you can use this value later to call GET /api/invoice/:id,
+    }
+}
+</code></pre>
+        <hr>
+        <code><b>GET</b> /api/invoice/:invoice_id</code>
+        <p>Retrieves invoice information.</p>
+        Response
+        <pre><code>
+{
+    "status": "ok" or error message,
+    "result":
+    {
+        "status": invoice status - unpaid/processing/expired/paid,
+        "amount_received": the atomic amount of TRTL received,
+        "atomic_amount": the atomic amount of TRTL due,
+        "currency_amount": amount due in the original currency,
+        "currency_code": the code of the original currency,
+        "order_id": id of the order,
+        "expiration": timestamp of the invoice expiration,
+        "payment_address": the address where funds should be sent,
+        "fee": dev fee amount in TRTL atomic units,
+    }
+}
+</code></pre>
+      </div>
+      <h1>Payment Notifications</h1>
+      <p>These notitifications are sent to the <code>ipn_uri</code> specified during invoice creation.
+      </p>
+      <br>
+      Response
+      <pre><code>
+{
+    "type": invoice status types = invoice_created, paid, expired:,
+    "currency_amount": amount due in the original currency,
+    "currency_code": the currency code,
+    "custom": Merchant specified custom data.
+    "merchant_address": the merchant's address,
+    "order_id": the order id,
+    "public_key": merchant's public key,
+}
+</code></pre>
+    </div>
+  </div>
+  </div>
+  <footer>shellpay&trade; 2019</footer>
+</body>
+
+</html>

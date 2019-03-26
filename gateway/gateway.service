@@ -1,0 +1,22 @@
+[Unit]
+Description=shellpay gateway service
+After=network.target
+
+[Service]
+Type=simple
+Restart=on-failure
+WorkingDirectory=
+Environment=GOROOT=/usr/local/go
+Environment=GOPATH=/root//go
+Environment=PATH=$GOPATH/bin:$GOROOT/bin:$PATH
+Environment=MASTER_KEY=
+Environment=DB_USER=
+Environment=DB_PWD=
+Environment=USER_URI=http://localhost:7071
+Environment=PAYMENT_URI=http://localhost:7073
+Environment=HOST_URI=https://shellpay.ml
+Environment=HOST_PORT=:443
+ExecStart=/root/shellium/gateway/gateway
+
+[Install]
+WantedBy=multi-user.target

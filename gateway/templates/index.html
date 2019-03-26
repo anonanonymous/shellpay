@@ -1,0 +1,40 @@
+
+<!doctype html>
+<html>
+
+<head>
+  <title>ShellPay&trade;</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css"
+    integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.5.2/animate.min.css">
+  <link rel="stylesheet" href="https://hunzaboy.github.io/Light-Modal/dist/css/light-modal.css">
+  <link rel="stylesheet" type="text/css" href="/assets/css/styles.css">
+</head>
+
+<body>
+  <header>
+    <div id="logo">
+      <a href="#"></a>
+    </div>
+  </header>
+  <div id="main-container">
+    <div id="body">
+      <p>ShellPay is a simple way to integrate <a href="https://turtlecoin.lol">TurtleCoin</a> payments on ecommerce stores!  </p>
+      <div>
+        <h3>Getting Started</h3>
+        <p>The first step to integrate shellpay is to generate a key pair. This will generate keys that will be used to
+          authenticate API calls. Save these keys in a secure location on
+          your server.</p>
+        <p>Next, create a http handler that will listen for payment notifications from ShellPay. Make sure you
+          authenticate the HMAC signature of the raw request data. This is to verify that the incoming request was delivered by ShellPay. </p>
+        <p>See the <a href="/docs">API Docs</a>.</p>
+      </div>
+    </div>
+  </div>
+  <footer>shellpay&trade; 2019</footer>
+</body>
+
+</html>

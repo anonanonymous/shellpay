@@ -1,0 +1,88 @@
+* {
+  box-sizing: border-box;
+}
+body {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+}
+header {
+  display: flex;
+  height: 100px;
+  padding: 5px;
+  border: 1px solid black;
+}
+footer {
+  border: 1px solid black;
+  padding: 10px;
+}
+
+pre, code {
+    background-color: #eee;
+    border-radius: 3px;
+    font-family: courier, monospace;
+}
+
+pre {
+    overflow: auto;
+    margin: 0;
+    padding-bottom: 16px;
+	word-break: break-all;
+    white-space: pre-wrap;
+}
+
+code {
+	display: inline;
+	overflow: visible;
+    padding: 0;
+    line-height: inherit;
+}
+
+#main-container {
+  flex: 1;
+}
+#main-container > #body {
+  flex: 1;
+  border: 1px solid black;
+  border-radius: 4px;
+  margin: 10px;
+  padding: 10px;
+}
+#main-container > #sidebars {
+  flex: none;
+  flex-basis: 300px;
+}
+#main-container > #sidebars > aside {
+  min-height: 200px;
+  margin: 10px;
+  border: 1px solid black;
+  border-radius: 4px;
+  padding: 10px;
+}
+#logo {
+  height: 100%;
+  width: 225px;
+  background: url('../images/shellpay2.svg');
+  background-repeat: no-repeat;
+  background-size: contain;
+  cursor: pointer;
+}
+#logo > a {
+    height: 100%;
+    width: 100%;
+    display: block;
+}
+#settings {
+  background: orange;
+  height: auto;
+  width: -webkit-fill-available;
+  width: -moz-available;
+}
+
+@media only screen and (min-width: 750px) {
+  #main-container {
+    display: flex;
+  }
+}

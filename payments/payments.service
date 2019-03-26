@@ -1,0 +1,22 @@
+[Unit]
+Description=shellpay payments service
+After=network.target
+
+[Service]
+Type=simple
+Restart=on-failure
+WorkingDirectory=
+Environment=GOROOT=/usr/local/go
+Environment=GOPATH=/root/go
+Environment=PATH=$GOPATH/bin:$GOROOT/bin:$PATH
+Environment=WALLET_HOST=http://localhost
+Environment=WALLET_PORT=8070
+Environment=MASTER_KEY=
+Environment=HOST_PORT=:7073
+Environment=REDIS_PORT=:6379
+Environment=HOST_URI=http://localhost
+Environment=GATEWAY_URI=https://shellpay.ml:443
+ExecStart=/root/shellium/payments/payments
+
+[Install]
+WantedBy=multi-user.target
