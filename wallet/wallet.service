@@ -1,0 +1,12 @@
+[Unit]
+Description=shellpay wallet service
+After=network.target
+
+[Service]
+Type=simple
+Restart=on-failure
+WorkingDirectory=/root/shellpay/wallet
+ExecStart=/root/shellpay/wallet/index.js
+
+[Install]
+WantedBy=multi-user.target
