@@ -1,0 +1,6 @@
+{
+	"payments_uri": "http://localhost:7073",
+	"wallet_file": "<replace me>",
+	"wallet_pass": "<replace me?",
+	"master_key": "<replace me>"
+}

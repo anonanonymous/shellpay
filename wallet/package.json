@@ -1,0 +1,13 @@
+{
+  "name": "wallet",
+  "version": "1.0.0",
+  "description": "wallet api",
+  "main": "index.js",
+  "author": "anonanonympus",
+  "license": "MIT",
+  "dependencies": {
+    "fastify": "^2.0.0",
+    "node-fetch": "^2.3.0",
+    "turtlecoin-wallet-backend": "https://github.com/turtlecoin/turtlecoin-wallet-backend-js"
+  }
+}
