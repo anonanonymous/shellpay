@@ -169,10 +169,10 @@ func handleGetInvoice(res http.ResponseWriter, req *http.Request, p httprouter.P
 // handleTXReceived - handles payments
 func handleTXReceived(res http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	var jresp map[string]interface{}
-	// TODO: hmac sign request in wallet service
-	data, err := getBody(req)
+
+	data, code, err := validateRequest(req)
 	if err != nil {
-		log.Println("Error:", err)
+		handleError(res, err.Error(), code)
 		return
 	}
 	if err = json.Unmarshal(data, &jresp); err != nil {
